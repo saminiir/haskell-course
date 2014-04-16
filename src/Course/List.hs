@@ -68,12 +68,9 @@ foldLeft f b (h :. t) = let b' = f b h in b' `seq` foldLeft f b' t
 -- prop> x `headOr` infinity == 0
 --
 -- prop> x `headOr` Nil == x
-headOr ::
-  a
-  -> List a
-  -> a
-headOr =
-  error "todo"
+headOr :: a -> List a -> a
+headOr _ (h :. _) = h
+headOr x Nil = x
 
 -- | The product of the elements of a list.
 --
@@ -82,11 +79,9 @@ headOr =
 --
 -- >>> product (1 :. 2 :. 3 :. 4 :. Nil)
 -- 24
-product ::
-  List Int
-  -> Int
-product =
-  error "todo"
+product :: List Int -> Int
+product (h :. t) = h * product t
+product Nil = 1
 
 -- | Sum the elements of the list.
 --
@@ -97,11 +92,8 @@ product =
 -- 10
 --
 -- prop> foldLeft (-) (sum x) x == 0
-sum ::
-  List Int
-  -> Int
-sum =
-  error "todo"
+sum :: List Int -> Int
+sum (a) = foldLeft (+) 0 a
 
 -- | Return the length of the list.
 --
@@ -109,11 +101,9 @@ sum =
 -- 3
 --
 -- prop> sum (map (const 1) x) == length x
-length ::
-  List a
-  -> Int
-length =
-  error "todo"
+length :: List a -> Int
+length (h :. t) = 1 + length t
+length Nil = 0
 
 -- | Map the given function on each element of the list.
 --
@@ -123,12 +113,8 @@ length =
 -- prop> headOr x (map (+1) infinity) == 1
 --
 -- prop> map id x == x
-map ::
-  (a -> b)
-  -> List a
-  -> List b
-map =
-  error "todo"
+map :: (a -> b) -> List a -> List b
+map f (h :. t) = foldLeft f (f h) t
 
 -- | Return elements satisfying the given predicate.
 --
