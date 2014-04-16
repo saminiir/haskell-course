@@ -102,7 +102,7 @@ sum (a) = foldLeft (+) 0 a
 --
 -- prop> sum (map (const 1) x) == length x
 length :: List a -> Int
-length (h :. t) = 1 + length t
+length (_ :. t) = 1 + length t
 length Nil = 0
 
 -- | Map the given function on each element of the list.
@@ -114,7 +114,8 @@ length Nil = 0
 --
 -- prop> map id x == x
 map :: (a -> b) -> List a -> List b
-map f (h :. t) = foldLeft f (f h) t
+map f (h :. t) = (f h) :. (map f t)
+map _ Nil = Nil
 
 -- | Return elements satisfying the given predicate.
 --
@@ -126,12 +127,9 @@ map f (h :. t) = foldLeft f (f h) t
 -- prop> filter (const True) x == x
 --
 -- prop> filter (const False) x == Nil
-filter ::
-  (a -> Bool)
-  -> List a
-  -> List a
-filter =
-  error "todo"
+filter :: (a -> Bool) -> List a -> List a
+filter f (h :. t) = foldRight (\x y -> if (f x) then x :. y else y) Nil (h :. t)
+filter _ Nil = Nil
 
 -- | Append two lists to a new list.
 --
@@ -145,12 +143,9 @@ filter =
 -- prop> (x ++ y) ++ z == x ++ (y ++ z)
 --
 -- prop> x ++ Nil == x
-(++) ::
-  List a
-  -> List a
-  -> List a
-(++) =
-  error "todo"
+(++) :: List a -> List a -> List a
+(++) (x :. xs) ys = x :. xs ++ ys 
+(++) Nil ys = ys 
 
 infixr 5 ++
 
@@ -164,11 +159,9 @@ infixr 5 ++
 -- prop> headOr x (flatten (y :. infinity :. Nil)) == headOr 0 y
 --
 -- prop> sum (map length x) == length (flatten x)
-flatten ::
-  List (List a)
-  -> List a
-flatten =
-  error "todo"
+flatten :: List (List a) -> List a
+flatten (x :. xs) = x ++ flatten xs
+flatten Nil = Nil
 
 -- | Map a function then flatten to a list.
 --
@@ -180,12 +173,9 @@ flatten =
 -- prop> headOr x (flatMap id (y :. infinity :. Nil)) == headOr 0 y
 --
 -- prop> flatMap id (x :: List (List Int)) == flatten x
-flatMap ::
-  (a -> List b)
-  -> List a
-  -> List b
-flatMap =
-  error "todo"
+flatMap :: (a -> List b) -> List a -> List b
+flatMap f (x :. xs) = f x ++ flatMap f xs
+flatMap _ Nil       = Nil
 
 -- | Convert a list of optional values to an optional list of values.
 --
@@ -209,11 +199,9 @@ flatMap =
 --
 -- >>> seqOptional (Empty :. map Full infinity)
 -- Empty
-seqOptional ::
-  List (Optional a)
-  -> Optional (List a)
-seqOptional =
-  error "todo"
+seqOptional :: List (Optional a) -> Optional (List a)
+seqOptional ((Full x) :. xs) = foldRight 
+seqOptional Nil = (Full Nil)
 
 -- | Find the first element in the list matching the predicate.
 --
