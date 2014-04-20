@@ -40,10 +40,8 @@ instance Show t => Show (List t) where
   show = show . foldRight (:) []
 
 -- The list of integers from zero to infinity.
-infinity ::
-  List Integer
-infinity =
-  let inf x = x :. inf (x+1)
+infinity :: List Integer
+infinity = let inf x = x :. inf (x+1)
   in inf 0
 
 -- functions over List that you may consider using
@@ -200,8 +198,7 @@ flatMap _ Nil       = Nil
 -- >>> seqOptional (Empty :. map Full infinity)
 -- Empty
 seqOptional :: List (Optional a) -> Optional (List a)
-seqOptional ((Full x) :. xs) = error "todo"
-seqOptional Nil = (Full Nil)
+seqOptional = foldRight (twiceOptional (:.)) (Full Nil)
 
 -- | Find the first element in the list matching the predicate.
 --
@@ -221,7 +218,7 @@ seqOptional Nil = (Full Nil)
 -- Full 0
 find :: (a -> Bool) -> List a -> Optional a
 find f (h :. t) = if f h then Full h else find f t 
-find f Nil = Empty
+find _ Nil = Empty
 
 -- | Determine if the length of the given list is greater than 4.
 --
@@ -234,11 +231,12 @@ find f Nil = Empty
 -- >>> lengthGT4 (1 :. 2 :. 3 :. 4 :. 5 :. Nil)
 -- True
 --
+-- | This was a test case I didn't notice first and got stuck in a loop :)
 -- >>> lengthGT4 infinity
 -- True
 lengthGT4 :: List a -> Bool
--- Why fails?? lengthGT4 x = length x > 2
-lengthGT4 Nil = False
+lengthGT4 (_ :. _ :. _ :. _ :. _ :. _) = True
+lengthGT4 _ = False
 
 -- | Reverse a list.
 --
@@ -249,8 +247,7 @@ lengthGT4 Nil = False
 --
 -- prop> let types = x :: Int in reverse (x :. Nil) == x :. Nil
 reverse :: List a -> List a
-reverse (h :. t) = error "todo"
-reverse Nil = Nil
+reverse = foldLeft (flip (:.)) Nil
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
@@ -261,8 +258,7 @@ reverse Nil = Nil
 -- >>> let (x:.y:.z:.w:._) = produce (*2) 1 in [x,y,z,w]
 -- [1,2,4,8]
 produce :: (a -> a) -> a -> List a
-produce f x = x :. apply f x
-        where apply f x = f x :. apply f (f x) -- Refactor this uglinezz
+produce f x = x :. produce f (f x)
 
 -- | Do anything other than reverse a list.
 -- Is it even possible?
@@ -274,7 +270,7 @@ produce f x = x :. apply f x
 --
 -- prop> let types = x :: Int in notReverse (x :. Nil) == x :. Nil
 notReverse :: List a -> List a
-notReverse x = x  
+notReverse x = reverse x  
 
 hlist :: List a -> [a]
 hlist = foldRight (:) []
@@ -454,13 +450,8 @@ drop n (_:.xs) = drop (n-1) xs
 repeat :: a -> List a
 repeat x = x :. repeat x
 
-replicate ::
-  (Num n, Ord n) =>
-  n
-  -> a
-  -> List a
-replicate n x =
-  take n (repeat x)
+replicate :: (Num n, Ord n) => n -> a -> List a
+replicate n x = take n (repeat x)
 
 reads ::
   P.Read a =>
