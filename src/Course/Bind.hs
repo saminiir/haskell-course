@@ -87,7 +87,7 @@ instance Bind Optional where
 -- >>> ((*) =<< (+10)) 7
 -- 119
 instance Bind ((->) t) where
-  (=<<) f g x = error "todo"
+  (=<<) f g x = f (g x) x
 
 -- | Flattens a combined structure to a single structure.
 --
@@ -103,7 +103,7 @@ instance Bind ((->) t) where
 -- >>> join (+) 7
 -- 14
 join :: Bind f => f (f a) -> f a
-join = error "todo"
+join = (=<<) (\x -> x)
 
 -- | Implement a flipped version of @(=<<)@, however, use only
 -- @join@ and @(<$>)@.
@@ -112,7 +112,7 @@ join = error "todo"
 -- >>> ((+10) >>= (*)) 7
 -- 119
 (>>=) :: Bind f => f a -> (a -> f b) -> f b
-(>>=) = error "todo"
+(>>=) f a = join $ (\x -> a x) <$> f
 
 infixl 1 >>=
 
