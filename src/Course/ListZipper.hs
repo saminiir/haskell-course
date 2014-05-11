@@ -143,7 +143,7 @@ withFocus f (ListZipper a x b) = ListZipper a (f x) b
 -- >>> setFocus 1 (zipper [1,0] 2 [3,4])
 -- [1,0] >1< [3,4]
 setFocus :: a -> ListZipper a -> ListZipper a
-setFocus v z = withFocus (\_ -> v) z
+setFocus v = withFocus (\_ -> v)
 
 -- A flipped infix alias for `setFocus`. This allows:
 --
@@ -294,12 +294,8 @@ moveLeftN :: Int -> ListZipper a -> MaybeListZipper a
 moveLeftN v (ListZipper (a:.as) x bs) = error "todo"
 
 -- Move the focus right the given number of positions. If the value is negative, move left instead.
-moveRightN ::
-  Int
-  -> ListZipper a
-  -> MaybeListZipper a
-moveRightN =
-  error "todo"
+moveRightN :: Int -> ListZipper a -> MaybeListZipper a
+moveRightN = error "todo"
 
 -- | Move the focus left the given number of positions. If the value is negative, move right instead.
 -- If the focus cannot be moved, the given number of times, return the value by which it can be moved instead.
@@ -324,12 +320,18 @@ moveRightN =
 --
 -- >>> moveLeftN' (-4) (zipper [5,4,3,2,1] 6 [7,8,9])
 -- Left 3
-moveLeftN' ::
-  Int
-  -> ListZipper a
-  -> Either Int (ListZipper a)
-moveLeftN' =
-  error "todo"
+moveLeftN' :: Int -> ListZipper a -> Either Int (ListZipper a)
+moveLeftN' a (ListZipper (x:.xs) v (b:.bs))
+                            | a > xslen = Left xslen
+                            | a < -bslen = Left bslen
+                            | a < 0 = moveLeftN' (a+1) shiftLeft
+                            | a > 0 = moveLeftN' (a-1) shiftRight
+                            | otherwise = Right (ListZipper (x:.xs) v (b:.bs))
+                            where
+                                xslen = length (x:.xs)
+                                bslen = length (b:.bs)
+                                shiftLeft = ListZipper (v:.x:.xs) b bs
+                                shiftRight = ListZipper xs x (v:.b:.bs)
 
 -- | Move the focus right the given number of positions. If the value is negative, move left instead.
 -- If the focus cannot be moved, the given number of times, return the value by which it can be moved instead.
@@ -348,12 +350,8 @@ moveLeftN' =
 --
 -- >>> moveRightN' (-4) (zipper [3,2,1] 4 [5,6,7])
 -- Left 3
-moveRightN' ::
-  Int
-  -> ListZipper a
-  -> Either Int (ListZipper a)
-moveRightN' =
-  error "todo"
+moveRightN' :: Int -> ListZipper a -> Either Int (ListZipper a)
+moveRightN' a = moveLeftN' (-a)
 
 -- | Move the focus to the given absolute position in the zipper. Traverse the zipper only to the extent required.
 --
@@ -365,12 +363,16 @@ moveRightN' =
 --
 -- >>> nth 8 (zipper [3,2,1] 4 [5,6,7])
 -- ><
-nth ::
-  Int
-  -> ListZipper a
-  -> MaybeListZipper a
-nth =
-  error "todo"
+nth :: Int -> ListZipper a -> MaybeListZipper a
+nth x (ListZipper (a:.as) v (b:.bs)) 
+                            | x < leftLen = moveToIndex (-leftLen + x) list'
+                            | otherwise = moveToIndex (x - leftLen) list'
+                        where
+                            leftLen = length (a:.as)
+                            list' = ListZipper (a:.as) v (b:.bs)
+                            moveToIndex n z = case moveRightN' n z of
+                                                Left _ -> IsNotZ
+                                                Right z' -> IsZ z'
 
 -- | Return the absolute position of the current focus in the zipper.
 --
@@ -378,11 +380,9 @@ nth =
 -- 3
 --
 -- prop> optional True (\z' -> index z' == i) (toOptional (nth i z))
-index ::
-  ListZipper a
-  -> Int
-index =
-  error "todo"
+index :: ListZipper a -> Int
+index (ListZipper (_:.as) v bs) = 1 + index (ListZipper as v bs)
+index (ListZipper Nil _ _) = 0
 
 -- | Move the focus to the end of the zipper.
 --
@@ -392,11 +392,9 @@ index =
 -- prop> toList lz == toList (end lz)
 --
 -- prop> rights (end lz) == Nil
-end ::
-  ListZipper a
-  -> ListZipper a
-end =
-  error "todo"
+end :: ListZipper a -> ListZipper a
+end (ListZipper as v (b:.bs)) = end $ ListZipper (v:.as) b bs
+end (ListZipper as v Nil) = ListZipper as v Nil
 
 -- | Move the focus to the start of the zipper.
 --
@@ -406,11 +404,9 @@ end =
 -- prop> toList lz == toList (start lz)
 --
 -- prop> lefts (start lz) == Nil
-start ::
-  ListZipper a
-  -> ListZipper a
-start =
-  error "todo"
+start :: ListZipper a -> ListZipper a
+start (ListZipper (a:.as) v bs) = start $ ListZipper as a (v:.bs)
+start (ListZipper Nil v bs) = ListZipper Nil v bs
 
 -- | Delete the current focus and pull the left values to take the empty position.
 --
@@ -419,11 +415,9 @@ start =
 --
 -- >>> deletePullLeft (zipper [] 1 [2,3,4])
 -- ><
-deletePullLeft ::
-  ListZipper a
-  -> MaybeListZipper a
-deletePullLeft =
-  error "todo"
+deletePullLeft :: ListZipper a -> MaybeListZipper a
+deletePullLeft (ListZipper (a:.as) _ bs) = IsZ $ ListZipper as a bs
+deletePullLeft (ListZipper Nil _ _) = IsNotZ
 
 -- | Delete the current focus and pull the right values to take the empty position.
 --
@@ -432,11 +426,9 @@ deletePullLeft =
 --
 -- >>> deletePullRight (zipper [3,2,1] 4 [])
 -- ><
-deletePullRight ::
-  ListZipper a
-  -> MaybeListZipper a
-deletePullRight =
-  error "todo"
+deletePullRight :: ListZipper a -> MaybeListZipper a
+deletePullRight (ListZipper as _ (b:.bs)) = IsZ $ ListZipper as b bs
+deletePullRight (ListZipper _ _ Nil) = IsNotZ
 
 -- | Insert at the current focus and push the left values to make way for the new position.
 --
@@ -447,12 +439,8 @@ deletePullRight =
 -- [1] >15< [2,3,4]
 --
 -- prop> optional False (==z) (toOptional (deletePullLeft (insertPushLeft i z)))
-insertPushLeft ::
-  a
-  -> ListZipper a
-  -> ListZipper a
-insertPushLeft =
-  error "todo"
+insertPushLeft :: a -> ListZipper a -> ListZipper a
+insertPushLeft v (ListZipper as x bs) = ListZipper (x:.as) v bs
 
 -- | Insert at the current focus and push the right values to make way for the new position.
 --
@@ -463,12 +451,8 @@ insertPushLeft =
 -- [3,2,1] >15< [4]
 --
 -- prop> optional False (==z) (toOptional (deletePullRight (insertPushRight i z)))
-insertPushRight ::
-  a
-  -> ListZipper a
-  -> ListZipper a
-insertPushRight =
-  error "todo"
+insertPushRight :: a -> ListZipper a -> ListZipper a
+insertPushRight v (ListZipper as x bs) = ListZipper as v (x :. bs)
 
 -- | Implement the `Apply` instance for `ListZipper`.
 -- This implementation zips functions with values by function application.
