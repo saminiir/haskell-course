@@ -154,12 +154,8 @@ flbindParser = flip bindParser
 --
 -- >>> isErrorResult (parse (character >>> valueParser 'v') "")
 -- True
-(>>>) ::
-  Parser a
-  -> Parser b
-  -> Parser b
-(>>>) =
-  error "todo"
+(>>>) :: Parser a -> Parser b -> Parser b
+(>>>) x y = bindParser (\_ -> y) x
 
 -- | Return a parser that tries the first parser for a successful value.
 --
@@ -178,12 +174,12 @@ flbindParser = flip bindParser
 --
 -- >>> parse (failed ||| valueParser 'v') "abc"
 -- Result >abc< 'v'
-(|||) ::
-  Parser a
-  -> Parser a
-  -> Parser a
-(|||) =
-  error "todo"
+(|||) :: Parser a -> Parser a -> Parser a
+(|||) x y = P (\x' -> case parse x x' of
+                        Result a b -> Result a b
+                        ErrorResult _ -> case parse y x' of
+                                            Result c d -> Result c d
+                                            ErrorResult b' -> ErrorResult b')
 
 infixl 3 |||
 
@@ -260,10 +256,8 @@ satisfy =
 --   * The produced character is not equal to the given character.
 --
 -- /Tip:/ Use the @satisfy@ function.
-is ::
-  Char -> Parser Char
-is =
-  error "todo"
+is :: Char -> Parser Char
+is x = satisfy (\x' -> if x' == x then True else False)
 
 -- | Return a parser that produces a character between '0' and '9' but fails if
 --
@@ -272,10 +266,8 @@ is =
 --   * The produced character is not a digit.
 --
 -- /Tip:/ Use the @satisfy@ and @Data.Char.isDigit@ functions.
-digit ::
-  Parser Char
-digit =
-  error "todo"
+digit :: Parser Char
+digit = satisfy (\x -> isDigit x)
 
 -- | Return a parser that produces zero or a positive integer but fails if
 --
@@ -298,10 +290,8 @@ natural =
 --   * The produced character is not a space.
 --
 -- /Tip:/ Use the @satisfy@ and @Data.Char.isSpace@ functions.
-space ::
-  Parser Char
-space =
-  error "todo"
+space :: Parser Char
+space = satisfy (\x -> isSpace x)
 
 -- | Return a parser that produces one or more space characters
 -- (consuming until the first non-space) but fails if
@@ -323,10 +313,8 @@ spaces1 =
 --   * The produced character is not lower-case.
 --
 -- /Tip:/ Use the @satisfy@ and @Data.Char.isLower@ functions.
-lower ::
-  Parser Char
-lower =
-  error "todo"
+lower :: Parser Char
+lower = satisfy (\x -> isLower x)
 
 -- | Return a parser that produces an upper-case character but fails if
 --
@@ -335,10 +323,8 @@ lower =
 --   * The produced character is not upper-case.
 --
 -- /Tip:/ Use the @satisfy@ and @Data.Char.isUpper@ functions.
-upper ::
-  Parser Char
-upper =
-  error "todo"
+upper :: Parser Char
+upper = satisfy (\x -> isUpper x)
 
 -- | Return a parser that produces an alpha character but fails if
 --
@@ -347,10 +333,8 @@ upper =
 --   * The produced character is not alpha.
 --
 -- /Tip:/ Use the @satisfy@ and @Data.Char.isAlpha@ functions.
-alpha ::
-  Parser Char
-alpha =
-  error "todo"
+alpha :: Parser Char
+alpha = satisfy (\x -> isAlpha x)
 
 -- | Return a parser that sequences the given list of parsers by producing all their results
 -- but fails on the first failing parser of the list.
@@ -363,11 +347,18 @@ alpha =
 --
 -- >>> isErrorResult (parse (sequenceParser (character :. is 'x' :. upper :. Nil)) "abCdef")
 -- True
-sequenceParser ::
-  List (Parser a)
-  -> Parser (List a)
-sequenceParser =
-  error "todo"
+sequenceParser :: List (Parser a) -> Parser (List a)
+sequenceParser Nil = valueParser Nil
+sequenceParser (x:.xs) = bindParser (\v -> sequenceParser xs `flbindParser` \vs -> valueParser (v:.vs)) x
+
+-- bindParser (\"a" -> sequenceParser [is 'x' :. upper :. Nil] >>= \vs -> valueParser (v:.vs)) character)
+-- bindParser (\"x" -> sequenceParser [upper :. Nil] >>= \vs -> valueParser (v:.vs)) is 'x')
+-- bindParser (\"C" -> sequenceParser [Nil] >>= \vs -> valueParser (v:.vs)) upper)
+-- Nil = valueParser Nil
+-- bindParser (\"C" -> valueParser Nil >>= \vs -> valueParser ("C":.Nil)) upper)
+-- bindParser (\"x" -> valueParser ("C":.Nil) >>= \vs -> valueParser ("x":."C":.Nil)) is 'x')
+-- bindParser (\"a" -> valueParser ("x":."C":.Nil) >>= \vs -> valueParser ("a":."x":."C":.Nil)) character)
+-- "RETURN" value: valueParser ("a" :. "x" :. "C" :. Nil)
 
 -- | Return a parser that produces the given number of values off the given parser.
 -- This parser fails if the given parser fails in the attempt to produce the given number of values.
@@ -379,12 +370,8 @@ sequenceParser =
 --
 -- >>> isErrorResult (parse (thisMany 4 upper) "ABcDef")
 -- True
-thisMany ::
-  Int
-  -> Parser a
-  -> Parser (List a)
-thisMany =
-  error "todo"
+thisMany :: Int -> Parser a -> Parser (List a)
+thisMany a b = sequenceParser $ replicate a b 
 
 -- | Write a parser for Person.age.
 --
