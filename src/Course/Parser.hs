@@ -204,11 +204,8 @@ infixl 3 |||
 --
 -- >>> parse (list (character *> valueParser 'v')) ""
 -- Result >< ""
-list ::
-  Parser a
-  -> Parser (List a)
-list =
-  error "todo"
+list :: Parser a -> Parser (List a)
+list a = list1 a ||| valueParser Nil
 
 -- | Return a parser that produces at least one value from the given parser then
 -- continues producing a list of values from the given parser (to ultimately produce a non-empty list).
@@ -224,11 +221,9 @@ list =
 --
 -- >>> isErrorResult (parse (list1 (character *> valueParser 'v')) "")
 -- True
-list1 ::
-  Parser a
-  -> Parser (List a)
-list1 =
-  error "todo"
+list1 :: Parser a -> Parser (List a)
+list1 a = a `flbindParser` (\v -> list a `flbindParser` (\vs -> valueParser (v:.vs)))
+
 
 -- | Return a parser that produces a character but fails if
 --
@@ -243,11 +238,10 @@ list1 =
 --
 -- >>> isErrorResult (parse (satisfy isUpper) "abc")
 -- True
-satisfy ::
-  (Char -> Bool)
-  -> Parser Char
-satisfy =
-  error "todo"
+satisfy :: (Char -> Bool) -> Parser Char
+satisfy f = bindParser (\x -> if f x 
+                                then valueParser x
+                                else failed) character
 
 -- | Return a parser that produces the given character but fails if
 --
@@ -301,10 +295,8 @@ space = satisfy (\x -> isSpace x)
 --   * The first produced character is not a space.
 --
 -- /Tip:/ Use the @list1@ and @space@ functions.
-spaces1 ::
-  Parser Chars
-spaces1 =
-  error "todo"
+spaces1 :: Parser Chars
+spaces1 = list1 space
 
 -- | Return a parser that produces a lower-case character but fails if
 --
@@ -387,10 +379,8 @@ thisMany a b = sequenceParser $ replicate a b
 --
 -- >>> isErrorResult (parse ageParser "-120")
 -- True
-ageParser ::
-  Parser Int
-ageParser =
-  error "todo"
+ageParser :: Parser Int
+ageParser = natural
 
 -- | Write a parser for Person.firstName.
 -- /First Name: non-empty string that starts with a capital letter and is followed by zero or more lower-case letters/
@@ -402,10 +392,8 @@ ageParser =
 --
 -- >>> isErrorResult (parse firstNameParser "abc")
 -- True
-firstNameParser ::
-  Parser Chars
-firstNameParser =
-  error "todo"
+firstNameParser :: Parser Chars
+firstNameParser = upper `flbindParser` (\v -> list lower `flbindParser` (\v' -> valueParser (v:.v')))
 
 -- | Write a parser for Person.surname.
 --
@@ -421,10 +409,10 @@ firstNameParser =
 --
 -- >>> isErrorResult (parse surnameParser "abc")
 -- True
-surnameParser ::
-  Parser Chars
-surnameParser =
-  error "todo"
+surnameParser :: Parser Chars
+surnameParser = upper `flbindParser` (\v -> thisMany 5 lower `flbindParser` 
+                                     (\v' -> list lower `flbindParser` 
+                                     (\v'' -> valueParser (v:.v' ++ v''))))
 
 -- | Write a parser for Person.smoker.
 --
@@ -440,10 +428,8 @@ surnameParser =
 --
 -- >>> isErrorResult (parse smokerParser "abc")
 -- True
-smokerParser ::
-  Parser Char
-smokerParser =
-  error "todo"
+smokerParser :: Parser Char
+smokerParser = is 'y' ||| is 'n'
 
 -- | Write part of a parser for Person.phoneBody.
 -- This parser will only produce a string of digits, dots or hyphens.
