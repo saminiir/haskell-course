@@ -13,8 +13,8 @@ import Course.Applicative
 import Course.Bind
 import Course.Monad
 import Course.List
-import Course.Optional()
-import Data.Char()
+import Course.Optional
+import Data.Char
 
 -- $setup
 -- >>> :set -XOverloadedStrings
@@ -271,10 +271,9 @@ digit = satisfy (\x -> isDigit x)
 --
 -- /Tip:/ Use the @bindParser@, @valueParser@, @list@, @read@ and @digit@
 -- functions.
-natural ::
-  Parser Int
-natural =
-  error "todo"
+natural :: Parser Int
+natural =  list digit `flbindParser` (\v -> case read v of Empty -> failed
+                                                           Full v' -> valueParser v')
 
 --
 -- | Return a parser that produces a space character but fails if
@@ -448,10 +447,8 @@ smokerParser = is 'y' ||| is 'n'
 --
 -- >>> parse phoneBodyParser "a123-456"
 -- Result >a123-456< ""
-phoneBodyParser ::
-  Parser Chars
-phoneBodyParser =
-  error "todo"
+phoneBodyParser :: Parser Chars
+phoneBodyParser = list (digit ||| is '-' ||| is '.')
 
 -- | Write a parser for Person.phone.
 --
@@ -470,10 +467,11 @@ phoneBodyParser =
 --
 -- >>> isErrorResult (parse phoneParser "a123-456")
 -- True
-phoneParser ::
-  Parser Chars
-phoneParser =
-  error "todo"
+phoneParser :: Parser Chars
+phoneParser = digit `flbindParser` 
+       (\v -> phoneBodyParser `flbindParser` 
+       (\v' -> (is '#') >>> 
+       valueParser (v:.v')))
 
 -- | Write a parser for Person.
 --
@@ -519,10 +517,18 @@ phoneParser =
 --
 -- >>> parse personParser "123 Fred Clarkson y 123-456.789# rest"
 -- Result > rest< Person {age = 123, firstName = "Fred", surname = "Clarkson", smoker = 'y', phone = "123-456.789"}
-personParser ::
-  Parser Person
-personParser =
-  error "todo"
+personParser :: Parser Person
+personParser = ageParser `flbindParser`
+        (\age' -> spaces1 >>> 
+               firstNameParser `flbindParser`
+        (\firstName' -> spaces1 >>>
+               surnameParser `flbindParser`
+        (\surname' -> spaces1 >>>
+               smokerParser `flbindParser`
+        (\smoker' -> spaces1 >>>
+               phoneParser `flbindParser`
+        (\phoneNumber' -> 
+               valueParser $ Person age' firstName' surname' smoker' phoneNumber' )))))
 
 -- Make sure all the tests pass!
 
@@ -530,23 +536,19 @@ personParser =
 -- | Write a Functor instance for a @Parser@.
 -- /Tip:/ Use @bindParser@ and @valueParser@.
 instance Functor Parser where
-  (<$>) =
-     error "todo"
+  (<$>) f = bindParser (\v -> valueParser $ f v)
 
 -- | Write a Apply instance for a @Parser@.
 -- /Tip:/ Use @bindParser@ and @valueParser@.
 instance Apply Parser where
-  (<*>) =
-    error "todo"
+  (<*>) f = bindParser (\v -> f `flbindParser` \v' -> valueParser (v' v))
 
 -- | Write an Applicative functor instance for a @Parser@.
 instance Applicative Parser where
-  pure =
-    error "todo"
+  pure = valueParser
 
 -- | Write a Bind instance for a @Parser@.
 instance Bind Parser where
-  (=<<) =
-    error "todo"
+  (=<<) = bindParser
 
 instance Monad Parser where
